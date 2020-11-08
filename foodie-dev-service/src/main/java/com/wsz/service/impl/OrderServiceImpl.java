@@ -8,6 +8,8 @@ import com.wsz.mapper.OrdersMapper;
 import com.wsz.pojo.*;
 import com.wsz.pojo.bo.ShopcartBo;
 import com.wsz.pojo.bo.SubmitOrderBo;
+import com.wsz.pojo.vo.MerchantOrdersVO;
+import com.wsz.pojo.vo.OrderVO;
 import com.wsz.service.AddressService;
 import com.wsz.service.ItemService;
 import com.wsz.service.OrderService;
@@ -17,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -48,7 +51,7 @@ public class OrderServiceImpl implements OrderService {
 
     @Transactional(propagation = Propagation.REQUIRED)
     @Override
-    public String createOrder(List<ShopcartBo> shopcartList, SubmitOrderBo submitOrderBo) {
+    public OrderVO createOrder(List<ShopcartBo> shopcartList, SubmitOrderBo submitOrderBo) {
 
         String userId = submitOrderBo.getUserId();
         String addressId = submitOrderBo.getAddressId();
@@ -85,10 +88,12 @@ public class OrderServiceImpl implements OrderService {
         String itemSpecIdArr[] = itemSpecIds.split(",");
         Integer totalAmount = 0; //商品原价累计
         Integer realPayAmount = 0; //优惠后的实际支付价格累计
+        List<ShopcartBo> toBeRomovedShopcatList = new ArrayList<>();
         for (String itemSpecId : itemSpecIdArr){
             ShopcartBo cartItem = getBuyCountsFromShopCart(shopcartList, itemSpecId);
             //整合redis后，商品购买的数量重新从redis的购物车中获取
             int buyCounts = cartItem.getBuyCounts();
+            toBeRomovedShopcatList.add(cartItem);
             //2.1根据规格id，查询规格的基本信息，主要获取价格
             ItemsSpec itemsSpec = itemService.queryItemSpecById(itemSpecId);
             totalAmount += itemsSpec.getPriceNormal() * buyCounts;
@@ -126,7 +131,19 @@ public class OrderServiceImpl implements OrderService {
         waitPayOrderStatus.setCreatedTime(new Date());
         orderStatusMapper.insert(waitPayOrderStatus);
 
-        return orderId;
+        // 4. 构建商户订单，用于传给支付中心
+        MerchantOrdersVO merchantOrdersVO = new MerchantOrdersVO();
+        merchantOrdersVO.setMerchantOrderId(orderId);
+        merchantOrdersVO.setMerchantUserId(userId);
+        merchantOrdersVO.setAmount(realPayAmount + postAmount);
+        merchantOrdersVO.setPayMethod(payMethod);
+
+        //5.构建自定义订单vo
+        OrderVO orderVO = new OrderVO();
+        orderVO.setOrderId(orderId);
+        orderVO.setMerchantOrdersVO(merchantOrdersVO);
+        orderVO.setToBeRemovedShopcatdList(toBeRomovedShopcatList);
+        return orderVO;
     }
 
     @Transactional(propagation = Propagation.REQUIRED)

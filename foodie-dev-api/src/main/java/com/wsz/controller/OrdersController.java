@@ -4,7 +4,9 @@ import com.wsz.enums.OrderStatusEnum;
 import com.wsz.enums.PayMethod;
 import com.wsz.pojo.bo.ShopcartBo;
 import com.wsz.pojo.bo.SubmitOrderBo;
+import com.wsz.pojo.vo.OrderVO;
 import com.wsz.service.OrderService;
+import com.wsz.utils.CookieUtils;
 import com.wsz.utils.IMOOCJSONResult;
 import com.wsz.utils.JsonUtils;
 import com.wsz.utils.RedisOperator;
@@ -52,13 +54,18 @@ public class OrdersController extends BaseController{
         List<ShopcartBo> shopcartList = JsonUtils.jsonToList(shopcartJson,ShopcartBo.class);
 
         //1.创建订单
-        String orderId = orderService.createOrder(shopcartList,submitOrderBo);
+        OrderVO orderVO = orderService.createOrder(shopcartList,submitOrderBo);
+        String orderId = orderVO.getOrderId();
+
+        //清理覆盖现有的redis购物车缓存数据
+        shopcartList.removeAll(orderVO.getToBeRemovedShopcatdList());
+        redisOperator.set(FOODIE_SHOPCART + ":"+ submitOrderBo.getUserId(),JsonUtils.objectToJson(shopcartList));
         //2.创建订单以后，移除购物车中已经结算（已提交）的商品
-        //TODO 整合redis之后，完善购物车中的已结算商品清除，并且同步到前端的cookie
-//        CookieUtils.setCookie(request,response,FOODIE_SHOPCART,"",true);
+        //整合redis之后，完善购物车中的已结算商品清除，并且同步到前端的cookie
+        CookieUtils.setCookie(request,response,FOODIE_SHOPCART,JsonUtils.objectToJson(shopcartList),true);
 
         //3.向支付中心发送当前订单，用于保存支付中心的订单数据
-        return IMOOCJSONResult.ok(orderId);
+        return IMOOCJSONResult.ok();
     }
 
 
