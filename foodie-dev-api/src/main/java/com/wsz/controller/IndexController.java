@@ -78,7 +78,19 @@ public class IndexController {
         if (rootCatId == null){
             return IMOOCJSONResult.errorMsg("分类不存在");
         }
-        List<CategoryVO> list = categoryService.getSubCatList(rootCatId);
+
+        List<CategoryVO> list = new ArrayList<>();
+        String catsStr = redisOperator.get("subCat:" + rootCatId);
+        if (StringUtils.isBlank(catsStr)) {
+            list = categoryService.getSubCatList(rootCatId);
+            if (list != null && list.size() > 0){
+                redisOperator.set("subCat:" + rootCatId,JsonUtils.objectToJson(list));
+            }else {
+                redisOperator.set("subCat:" + rootCatId,JsonUtils.objectToJson(list),5*60);
+            }
+        }else {
+            list = JsonUtils.jsonToList(catsStr,CategoryVO.class);
+        }
         return IMOOCJSONResult.ok(list);
     }
 

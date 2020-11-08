@@ -1,6 +1,9 @@
 package com.wsz.service;
 
+import com.wsz.pojo.bo.ShopcartBo;
 import com.wsz.pojo.bo.SubmitOrderBo;
+
+import java.util.List;
 
 /**
  * @author by 完善者
@@ -13,7 +16,7 @@ public interface OrderService {
      * 用于创建订单相关信息
      * @param submitOrderBo
      */
-    public String createOrder(SubmitOrderBo submitOrderBo);
+    public String createOrder(List<ShopcartBo> shopcartList, SubmitOrderBo submitOrderBo);
 
 
     /**

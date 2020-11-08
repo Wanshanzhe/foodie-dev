@@ -6,6 +6,7 @@ import com.wsz.mapper.OrderItemsMapper;
 import com.wsz.mapper.OrderStatusMapper;
 import com.wsz.mapper.OrdersMapper;
 import com.wsz.pojo.*;
+import com.wsz.pojo.bo.ShopcartBo;
 import com.wsz.pojo.bo.SubmitOrderBo;
 import com.wsz.service.AddressService;
 import com.wsz.service.ItemService;
@@ -17,6 +18,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Date;
+import java.util.List;
 
 /**
  * @author by 完善者
@@ -46,7 +48,7 @@ public class OrderServiceImpl implements OrderService {
 
     @Transactional(propagation = Propagation.REQUIRED)
     @Override
-    public String createOrder(SubmitOrderBo submitOrderBo) {
+    public String createOrder(List<ShopcartBo> shopcartList, SubmitOrderBo submitOrderBo) {
 
         String userId = submitOrderBo.getUserId();
         String addressId = submitOrderBo.getAddressId();
@@ -84,8 +86,9 @@ public class OrderServiceImpl implements OrderService {
         Integer totalAmount = 0; //商品原价累计
         Integer realPayAmount = 0; //优惠后的实际支付价格累计
         for (String itemSpecId : itemSpecIdArr){
-            // TODO 整合redis后，商品购买的数量重新从redis的购物车中获取
-            int buyCounts = 1;
+            ShopcartBo cartItem = getBuyCountsFromShopCart(shopcartList, itemSpecId);
+            //整合redis后，商品购买的数量重新从redis的购物车中获取
+            int buyCounts = cartItem.getBuyCounts();
             //2.1根据规格id，查询规格的基本信息，主要获取价格
             ItemsSpec itemsSpec = itemService.queryItemSpecById(itemSpecId);
             totalAmount += itemsSpec.getPriceNormal() * buyCounts;
@@ -134,5 +137,20 @@ public class OrderServiceImpl implements OrderService {
         paidStatus.setOrderStatus(orderStatus);
         paidStatus.setPayTime(new Date());
         orderStatusMapper.updateByPrimaryKeySelective(paidStatus);
+    }
+
+    /**
+     * 从redis中的购物车里获取商品，目的：处理counts
+     * @param shopCartList
+     * @param specId
+     * @return
+     */
+    private ShopcartBo getBuyCountsFromShopCart(List<ShopcartBo> shopCartList,String specId){
+        for (ShopcartBo cart : shopCartList){
+            if (cart.getSpecId().equals(specId)){
+                return  cart;
+            }
+        }
+        return null;
     }
 }
