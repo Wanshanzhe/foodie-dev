@@ -1,0 +1,9 @@
+package com.wsz.mapper;
+
+import com.wsz.my.mapper.MyMapper;
+import com.wsz.pojo.OrderItems;
+import org.apache.ibatis.annotations.Mapper;
+
+@Mapper
+public interface OrderItemsMapper extends MyMapper<OrderItems> {
+}
