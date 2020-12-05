@@ -3,6 +3,7 @@ package com.wsz.controller.center;
 import com.wsz.controller.BaseController;
 import com.wsz.pojo.Users;
 import com.wsz.pojo.bo.center.CenterUserBO;
+import com.wsz.pojo.vo.UsersVO;
 import com.wsz.resource.FileUpload;
 import com.wsz.service.center.CenterUserService;
 import com.wsz.utils.CookieUtils;
@@ -112,10 +113,8 @@ public class CenterUserController extends BaseController {
         String finalUserFaceUrl = imageUrl + uploadPathPrefix + "?t=" + DateUtil.getCurrentDateString(DateUtil.DATE_PATTERN);
         //更新头像到数据库
         Users userResult = centerUserService.updateUserFace(userId,finalUserFaceUrl);
-        userResult = setNullProperty(userResult);
-        CookieUtils.setCookie(request,response,"user", JsonUtils.objectToJson(userResult),true);
-        // TODO 后续要改，增加令牌token，会整合进redis，分布式会话
-
+        UsersVO usersVO = conventUsersVO(userResult);
+        CookieUtils.setCookie(request,response,"user", JsonUtils.objectToJson(usersVO),true);
         return IMOOCJSONResult.ok();
     }
 
@@ -127,9 +126,8 @@ public class CenterUserController extends BaseController {
                                   HttpServletRequest request,
                                   HttpServletResponse response){
         Users userResult = centerUserService.updateUserInfo(userId, centerUserBO);
-        userResult = setNullProperty(userResult);
-        CookieUtils.setCookie(request,response,"user", JsonUtils.objectToJson(userResult),true);
-        // TODO 后续要改，增加令牌token，会整合进redis，分布式会话
+        UsersVO usersVO = conventUsersVO(userResult);
+        CookieUtils.setCookie(request,response,"user", JsonUtils.objectToJson(usersVO),true);
         return IMOOCJSONResult.ok(userResult);
     }
 
